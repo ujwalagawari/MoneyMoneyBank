@@ -26,8 +26,8 @@ public class SavingsAccountServiceImpl implements SavingsAccountService {
 	public SavingsAccount createNewAccount(String accountHolderName, double accountBalance, boolean salary)
 			throws ClassNotFoundException, SQLException {
 		SavingsAccount account = factory.createNewSavingsAccount(accountHolderName, accountBalance, salary);
-		savingsAccountDAO.createNewAccount(account);
-		return null;
+		account =savingsAccountDAO.createNewAccount(account);
+		return account;
 	}
 
 	@Override
@@ -46,6 +46,7 @@ public class SavingsAccountServiceImpl implements SavingsAccountService {
 			throw new InvalidInputException("Invalid Input Amount!");
 		}
 	}
+	
 	@Override
 	public void withdraw(SavingsAccount account, double amount) throws ClassNotFoundException, SQLException {
 		double currentBalance = account.getBankAccount().getAccountBalance();
@@ -75,9 +76,8 @@ public class SavingsAccountServiceImpl implements SavingsAccountService {
 	}
 
 	@Override
-	public SavingsAccount updateAccount(SavingsAccount account) {
-		// TODO Auto-generated method stub
-		return null;
+	public SavingsAccount updateAccount(SavingsAccount account, int accountNumber) throws ClassNotFoundException, SQLException, AccountNotFoundException {
+		return savingsAccountDAO.updateAccount(account, accountNumber);
 	}
 
 	@Override
@@ -86,7 +86,7 @@ public class SavingsAccountServiceImpl implements SavingsAccountService {
 	}
 
 	@Override
-	public SavingsAccount deleteAccount(int accountNumber) throws ClassNotFoundException, SQLException {
+	public SavingsAccount deleteAccount(int accountNumber) throws ClassNotFoundException, SQLException, AccountNotFoundException {
 		return savingsAccountDAO.deleteAccount(accountNumber);
 	}
 
@@ -94,22 +94,7 @@ public class SavingsAccountServiceImpl implements SavingsAccountService {
 	public double getCurrentBalance(int accountNumber) throws ClassNotFoundException, SQLException, AccountNotFoundException {
 		return savingsAccountDAO.getCurrentBalance(accountNumber);
 	}
-
-	@Override
-	public List<SavingsAccount> sortAccountsByAccountBalance(String sortWay) throws ClassNotFoundException, SQLException {
-		return savingsAccountDAO.sortAccountsByAccountBalance(sortWay);
-	}
-
-	@Override
-	public List<SavingsAccount> sortAccountsByAccountNumber(String sortWay) throws ClassNotFoundException, SQLException {
-		return savingsAccountDAO.sortAccountsByAccountNumber(sortWay);
-	}
-
-	@Override
-	public List<SavingsAccount> sortAccountsByAccountHolderName(String sortWay) throws ClassNotFoundException, SQLException {
-		return savingsAccountDAO.sortAccountsByAccountHolderName(sortWay);
-	}
-
+	
 	@Override
 	public List<SavingsAccount> getAccountsByHolderName(String holderName) throws SQLException, ClassNotFoundException {
 		return savingsAccountDAO.getAccountsByHolderName(holderName);
@@ -119,5 +104,4 @@ public class SavingsAccountServiceImpl implements SavingsAccountService {
 	public List<SavingsAccount> getAccountsBetweenMinMaxAccountBal(Double minBalance, Double maxBalance) throws SQLException, ClassNotFoundException {
 		return savingsAccountDAO.getAccountsBetweenMinMaxAccountBal(minBalance, maxBalance);
 	}
-
 }

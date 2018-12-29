@@ -16,19 +16,51 @@ public class SavingsAccountDAOImpl implements SavingsAccountDAO {
 
 	public SavingsAccount createNewAccount(SavingsAccount account) throws ClassNotFoundException, SQLException {
 		Connection connection = DBUtil.getConnection();
-		PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO ACCOUNT VALUES(?,?,?,?,?,?)");
+		PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO ACCOUNT VALUES(?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
 		preparedStatement.setInt(1, account.getBankAccount().getAccountNumber());
 		preparedStatement.setString(2, account.getBankAccount().getAccountHolderName());
 		preparedStatement.setDouble(3, account.getBankAccount().getAccountBalance());
 		preparedStatement.setBoolean(4, account.isSalary());
 		preparedStatement.setObject(5, null);
 		preparedStatement.setString(6, "SA");
-		preparedStatement.executeUpdate();
+		int rowsaffected = preparedStatement.executeUpdate();
+		
+		if (rowsaffected != 0){
+			try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
+				if(generatedKeys.next()){
+					account = new SavingsAccount(generatedKeys.getInt(1), account.getBankAccount().getAccountHolderName(),
+							account.getBankAccount().getAccountBalance(), account.isSalary());
+				} else {
+	                throw new SQLException("Creating user failed, no ID obtained.");
+	            }
+			}
+        }
 		preparedStatement.close();
-		DBUtil.commit();
+		commit();
 		return account;
 	}
 
+	@Override
+	public List<SavingsAccount> getAccountsByHolderName(String holderName) throws SQLException, ClassNotFoundException {
+		List<SavingsAccount> savingsAccounts = new ArrayList<>();
+		Connection connection = DBUtil.getConnection();
+		PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM ACCOUNT WHERE account_hn=?");
+		preparedStatement.setString(1, holderName);
+		ResultSet resultSet = preparedStatement.executeQuery();
+		while (resultSet.next()) {
+			int accountNumber = resultSet.getInt(1);
+			String accountHolderName = resultSet.getString("account_hn");
+			double accountBalance = resultSet.getDouble(3);
+			boolean salary = resultSet.getBoolean("salary");
+			SavingsAccount savingsAccount = new SavingsAccount(accountNumber, accountHolderName, accountBalance,
+					salary);
+			savingsAccounts.add(savingsAccount);
+		}
+		preparedStatement.close();
+		commit();
+		return savingsAccounts;
+	}
+	
 	public List<SavingsAccount> getAllSavingsAccount() throws ClassNotFoundException, SQLException {
 		List<SavingsAccount> savingsAccounts = new ArrayList<>();
 		Connection connection = DBUtil.getConnection();
@@ -43,9 +75,11 @@ public class SavingsAccountDAOImpl implements SavingsAccountDAO {
 					salary);
 			savingsAccounts.add(savingsAccount);
 		}
-		DBUtil.commit();
+		statement.close();
+		commit();
 		return savingsAccounts;
 	}
+	
 	@Override
 	public void updateBalance(int accountNumber, double currentBalance) throws ClassNotFoundException, SQLException {
 		Connection connection = DBUtil.getConnection();
@@ -75,20 +109,31 @@ public class SavingsAccountDAOImpl implements SavingsAccountDAO {
 		throw new AccountNotFoundException("Account with account number "+accountNumber+" does not exist.");
 	}
 	
-	public SavingsAccount updateAccount(SavingsAccount account) {
-		// TODO Auto-generated method stub
+	public SavingsAccount updateAccount(SavingsAccount account, int accountNumber) throws ClassNotFoundException, SQLException, AccountNotFoundException {
+		Connection connection = DBUtil.getConnection();
+		PreparedStatement preparedStatement = connection.prepareStatement
+				("UPDATE ACCOUNT SET salary=?, account_hn=? where account_id=?");
+		preparedStatement.setBoolean(1, account.isSalary());
+		preparedStatement.setString(2, account.getBankAccount().getAccountHolderName());
+		preparedStatement.setInt(3, accountNumber);
+		int rowsaffected = preparedStatement.executeUpdate();
+		preparedStatement.close();
+		commit();
+		if(rowsaffected != 0){
+			return account;
+		}
 		return null;
 	}
 
-	
-
 	@Override
-	public SavingsAccount deleteAccount(int accountNumber) throws ClassNotFoundException, SQLException {
+	public SavingsAccount deleteAccount(int accountNumber) throws ClassNotFoundException, SQLException, AccountNotFoundException {
 		Connection connection = DBUtil.getConnection();
 		PreparedStatement preparedStatement = connection.prepareStatement("DELETE FROM ACCOUNT WHERE ACCOUNT_ID=?");
 		preparedStatement.setInt(1, accountNumber);
 		preparedStatement.execute();
-		return null;
+		preparedStatement.close();
+		commit();
+		return getAccountById(accountNumber);
 	}
 
 	@Override
@@ -105,12 +150,38 @@ public class SavingsAccountDAOImpl implements SavingsAccountDAO {
 		double currentBalnce = 0;
 		if(resultSet.next()){
 			currentBalnce = resultSet.getDouble("ACCOUNT_BALANCE");
+			preparedStatement.close();
+			commit();
 			return currentBalnce;
 		}
 		throw new AccountNotFoundException("Account with account number "+accountNumber+" does not exist.");
 	}
-
+	
 	@Override
+	public List<SavingsAccount> getAccountsBetweenMinMaxAccountBal(Double minBalance, Double maxBalance) throws SQLException, ClassNotFoundException {
+		List<SavingsAccount> savingsAccounts = new ArrayList<>();
+		Connection connection = DBUtil.getConnection();
+		PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM ACCOUNT WHERE account_balance between ? and ?");
+		preparedStatement.setDouble(1, minBalance);
+		preparedStatement.setDouble(2, maxBalance);
+		ResultSet resultSet = preparedStatement.executeQuery();
+		while (resultSet.next()) {
+			int accountNumber = resultSet.getInt(1);
+			String accountHolderName = resultSet.getString("account_hn");
+			double accountBalance = resultSet.getDouble(3);
+			boolean salary = resultSet.getBoolean("salary");
+			SavingsAccount savingsAccount = new SavingsAccount(accountNumber, accountHolderName, accountBalance,
+					salary);
+			savingsAccounts.add(savingsAccount);
+		}
+		preparedStatement.close();
+		commit();
+		return savingsAccounts;
+	}
+
+	
+/*	
+  	@Override
 	public List<SavingsAccount> sortAccountsByAccountBalance(String sortWay) throws ClassNotFoundException, SQLException {
 		List<SavingsAccount> savingsAccounts = new ArrayList<>();
 		Connection connection = DBUtil.getConnection();
@@ -131,7 +202,8 @@ public class SavingsAccountDAOImpl implements SavingsAccountDAO {
 					salary);
 			savingsAccounts.add(savingsAccount);
 		}
-		DBUtil.commit();
+		statement.close();
+		commit();
 		return savingsAccounts;
 	}
 
@@ -185,47 +257,6 @@ public class SavingsAccountDAOImpl implements SavingsAccountDAO {
 		return savingsAccounts;
 	}
 
-	@Override
-	public List<SavingsAccount> getAccountsByHolderName(String holderName) throws SQLException, ClassNotFoundException {
-		List<SavingsAccount> savingsAccounts = new ArrayList<>();
-		Connection connection = DBUtil.getConnection();
-		PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM ACCOUNT WHERE account_hn=?");
-		preparedStatement.setString(1, holderName);
-		ResultSet resultSet = preparedStatement.executeQuery();
-		while (resultSet.next()) {
-			int accountNumber = resultSet.getInt(1);
-			String accountHolderName = resultSet.getString("account_hn");
-			double accountBalance = resultSet.getDouble(3);
-			boolean salary = resultSet.getBoolean("salary");
-			SavingsAccount savingsAccount = new SavingsAccount(accountNumber, accountHolderName, accountBalance,
-					salary);
-			savingsAccounts.add(savingsAccount);
-		}
-		DBUtil.commit();
-		return savingsAccounts;
-	}
-
-	@Override
-	public List<SavingsAccount> getAccountsBetweenMinMaxAccountBal(Double minBalance, Double maxBalance) throws SQLException, ClassNotFoundException {
-		List<SavingsAccount> savingsAccounts = new ArrayList<>();
-		Connection connection = DBUtil.getConnection();
-		PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM ACCOUNT WHERE account_balance between ? and ?");
-		preparedStatement.setDouble(1, minBalance);
-		preparedStatement.setDouble(2, maxBalance);
-		ResultSet resultSet = preparedStatement.executeQuery();
-		while (resultSet.next()) {
-			int accountNumber = resultSet.getInt(1);
-			String accountHolderName = resultSet.getString("account_hn");
-			double accountBalance = resultSet.getDouble(3);
-			boolean salary = resultSet.getBoolean("salary");
-			SavingsAccount savingsAccount = new SavingsAccount(accountNumber, accountHolderName, accountBalance,
-					salary);
-			savingsAccounts.add(savingsAccount);
-		}
-		DBUtil.commit();
-		return savingsAccounts;
-	}
-
-	
+	*/
 
 }

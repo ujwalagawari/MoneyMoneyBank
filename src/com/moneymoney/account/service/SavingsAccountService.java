@@ -10,11 +10,11 @@ public interface SavingsAccountService {
 
 	SavingsAccount createNewAccount(String accountHolderName, double accountBalance, boolean salary) throws ClassNotFoundException, SQLException;
 
-	SavingsAccount updateAccount(SavingsAccount account);
+	SavingsAccount updateAccount(SavingsAccount account, int accountNumber) throws ClassNotFoundException, SQLException, AccountNotFoundException;
 
 	SavingsAccount getAccountById(int accountNumber) throws ClassNotFoundException, SQLException, AccountNotFoundException;
 
-	SavingsAccount deleteAccount(int accountNumber) throws ClassNotFoundException, SQLException;
+	SavingsAccount deleteAccount(int accountNumber) throws ClassNotFoundException, SQLException, AccountNotFoundException;
 	
 	List<SavingsAccount> getAllSavingsAccount() throws ClassNotFoundException, SQLException;
 
@@ -25,18 +25,12 @@ public interface SavingsAccountService {
 	void withdraw(SavingsAccount account, double amount) throws ClassNotFoundException, SQLException;
 
 	double getCurrentBalance(int accountNumber) throws ClassNotFoundException, SQLException, AccountNotFoundException;
-
-	List<SavingsAccount> sortAccountsByAccountBalance(String sortWay) throws ClassNotFoundException, SQLException;
-
-	List<SavingsAccount> sortAccountsByAccountNumber(String sortWay) throws ClassNotFoundException, SQLException;
-
-	List<SavingsAccount> sortAccountsByAccountHolderName(String sortWay) throws ClassNotFoundException, SQLException;
-
+	
 	List<SavingsAccount> getAccountsByHolderName(String holderName) throws SQLException, ClassNotFoundException;
 
 	List<SavingsAccount> getAccountsBetweenMinMaxAccountBal(Double minBalance,Double maxBalance) throws SQLException, ClassNotFoundException;
 
-	
+
 	
 }
 
